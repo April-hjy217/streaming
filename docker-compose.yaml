@@ -1,0 +1,52 @@
+services:
+  redpanda:
+    image: redpandadata/redpanda:latest
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp 1
+      - --memory 1G
+      - --reserve-memory 0M
+      - --node-id 0
+      - --check=false
+    ports:
+      - "9092:9092" # Kafka-compatible API
+      - "9644:9644" # Admin API
+    volumes:
+      - redpanda_data:/var/lib/redpanda
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  flink-jobmanager:
+    image: flink:1.15
+    command: jobmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+    ports:
+      - "8081:8081" # Flink UI
+      - "6123:6123"
+    depends_on:
+      - redpanda
+      - postgres
+
+  flink-taskmanager:
+    image: flink:1.15
+    command: taskmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+    depends_on:
+      - flink-jobmanager
+
+volumes:
+  redpanda_data:
+  postgres_data:
